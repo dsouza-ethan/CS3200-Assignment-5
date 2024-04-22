@@ -9,34 +9,40 @@ import { MongoClient } from 'mongodb';
  * https://mongodb.github.io/node-mongodb-native
  */
 
-const client = await MongoClient.connect(
-    'mongodb://localhost27017/'
-);
+async function main() {
+    const client = await MongoClient.connect(
+        'mongodb://localhost:27017/'
+    );
 
-const coll = client.db('ieeevis2020Tweets').collection('tweets');
-const cursor = coll.find({}, { "user.screen_name": 1 }, { "retweeted_status.retweet_count": 1});
+    const coll = client.db('ieeevis2020Tweets').collection('tweets');
+    const cursor = coll.find({}, { "user.screen_name": 1, "retweeted_status.retweet_count": 1 });
 
-const retweets = {};
-await cursor.forEach(tweet => {
-    const screenName = tweet.user.screen_name;
-    const retweets = tweet.retweeted_status ? tweet.retweeted_status.retweet_count : 0;
+    const retweets = {};
 
-    if(!retweets[screenName]) {
-        retweets[screenName] = [];
-    }
+    await cursor.forEach(tweet => {
+        const screenName = tweet.user.screen_name;
+        const retweetCount = tweet.retweeted_status ? tweet.retweeted_status.retweet_count : 0;
 
-    retweets[screenName].push(retweets);
-})
+        if (!retweets[screenName]) {
+            retweets[screenName] = [];
+        }
 
-const filteredUsers = Object.entries(retweets)
-    .filter(([_, retweets]) => retweets.length > 3)
-    .map(([screenName, retweets]) => {
-        const avgRetweets = retweets.reduce((acc, count) => acc + count, 0) / retweets.length;
-        return { screenName, avgRetweets };
-    })
-    .sort((a, b) => b.avgRetweets - a.avgRetweets)
-    .slice(0, 10);
+        retweets[screenName].push(retweetCount); // Push retweetCount into the array
+    });
 
-console.log("Top 10 people who got more retweets on average after tweeting more than 3 times are the following:");
-console.log(filteredUsers);
-await client.close();
+    const filteredUsers = Object.entries(retweets)
+        .filter(([_, retweets]) => retweets.length > 3)
+        .map(([screenName, retweets]) => {
+            const avgRetweets = retweets.reduce((acc, count) => acc + count, 0) / retweets.length; // Calculate average
+            return { screenName, avgRetweets };
+        })
+        .sort((a, b) => b.avgRetweets - a.avgRetweets)
+        .slice(0, 10);
+
+    console.log("Top 10 people who got more retweets on average after tweeting more than 3 times are the following:");
+    console.log(filteredUsers);
+
+    await client.close(); // Close the MongoDB connection
+}
+
+main();

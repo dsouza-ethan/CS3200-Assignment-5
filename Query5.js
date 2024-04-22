@@ -11,27 +11,25 @@ import { MongoClient } from 'mongodb';
  * https://mongodb.github.io/node-mongodb-native
  */
 
-const coll = client.db('ieeevis2020Tweets').collection('tweets');
-const cursor = coll.find({}, { "user.screen_name": 1 }).sort({ "user.followers_count": -1 });
-
 async function separatedUsersAndTweets() {
     const client = await MongoClient.connect(
-        'mongodb://localhost27017/'
+        'mongodb://localhost:27017/'
     );
     const db = client.db('Assignment5');
+    const coll = db.collection('tweets');
 
-    await aggregateAndMergeUsers(db);
-    await aggregateAndMergeTweets(db);
+    await aggregateAndMergeUsers(db, coll);
+    await aggregateAndMergeTweets(db, coll);
 
-    console.log("Successfully separated users and tweets.")
+    console.log("Successfully separated users and tweets.");
     await client.close();
 }
 
-async function aggregateAndMergeUsers(db){
-    await db.collection('tweets').aggregate([
+async function aggregateAndMergeUsers(db, coll) {
+    await coll.aggregate([
         {
             $group: {
-                _id: "User.id",
+                _id: "$user.id",
                 name: { $first: "$user.screen_name" },
                 followers_count: { $first: "$user.followers_count" }
             }
@@ -40,8 +38,8 @@ async function aggregateAndMergeUsers(db){
     ]).toArray();
 }
 
-async function aggregateAndMergeTweets(db){
-    await db.collection('tweets').aggregate([
+async function aggregateAndMergeTweets(db, coll) {
+    await coll.aggregate([
         {
             $project: {
                 _id: 0,
@@ -52,3 +50,5 @@ async function aggregateAndMergeTweets(db){
         { $merge: { into: "Tweets_Only" } }
     ]).toArray();
 }
+
+separatedUsersAndTweets();

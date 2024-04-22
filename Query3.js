@@ -9,28 +9,38 @@ import { MongoClient } from 'mongodb';
  * https://mongodb.github.io/node-mongodb-native
  */
 
-const client = await MongoClient.connect(
-    'mongodb://localhost27017/'
-);
+async function main() {
+    const client = await MongoClient.connect(
+        'mongodb://localhost:27017/'
+    );
 
-const coll = client.db('ieeevis2020Tweets').collection('tweets');
-const cursor = coll.find({}, { "user.screen_name": 1 }).sort({ "user.followers_count": -1 });
+    const coll = client.db('ieeevis2020Tweets').collection('tweets');
+    const cursor = coll.find({}, { "user.screen_name": 1 });
 
-const userTweets = 0;
-await cursor.forEach(tweet => {
-    const screenName = tweet.user.screen_name;
-    if(!userTweets[screenName]) {
-        userTweets[screenName]++;
+    const userTweets = {}; // Initialize as an object instead of 0
+
+    await cursor.forEach(tweet => {
+        const screenName = tweet.user.screen_name;
+        if (!userTweets[screenName]) {
+            userTweets[screenName] = 1; // Initialize count to 1
+        } else {
+            userTweets[screenName]++; // Increment tweet count
+        }
+    });
+
+    let maxTweets = 0;
+    let maxUser = '';
+
+    for (const screenName in userTweets) {
+        if (userTweets[screenName] > maxTweets) {
+            maxTweets = userTweets[screenName];
+            maxUser = screenName;
+        }
     }
-})
 
-let maxTweets = 0;
-let maxUser = '';
+    console.log("Person with the most tweets is ", maxUser, " with ", maxTweets, " total tweets.");
 
-for(const screenName in userTweets) {
-    if(userTweets[screenName] > maxTweets)
-        maxTweets = userTweets[screenName];
-        maxUser = screenName;
+    client.close(); // Close the MongoDB connection
 }
 
-console.log("Person with the most tweets is ", maxUser, " with ", maxTweets, " total tweets.");
+main();
